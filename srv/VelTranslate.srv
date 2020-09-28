@@ -1,0 +1,5 @@
+geometry_msgs/Vector3 linear   # This expresses velocity in free space broken into its linear and angular parts.
+geometry_msgs/Vector3 angular
+---
+float32 linear  # the linear velocity of the turtle in m/s
+float32 angular # the angular velocity of the turtle in rad/s

@@ -132,4 +132,4 @@ Unless otherwise specified, list the command and all arguments that you passed t
 16. Use the ROS command `rosnode kill mover` to kill the `/mover` node.
 17. Use the ROS command `rosrun crazy_turtle mover cmd_vel:=/turtle1/cmd_vel` to start the `/mover` node. Be sure to
     remap `cmd_vel` to `/turtle1/cmd_vel`.
-18. What happened to the turtle's velocity after relaunching `mover`? Same
+18. What happened to the turtle's velocity after relaunching `mover`? Faster
