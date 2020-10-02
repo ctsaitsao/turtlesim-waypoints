@@ -1,0 +1,191 @@
+#!/usr/bin/env python
+"""
+Node makes turtle1 to follow a series of waypoints, publishing TurtleVel
+messages while also marking the waypoints.
+
+SUBSCRIBERS:
+    pose (Pose): planar position and velocity of the turtle
+
+PUBLISHERS:
+    turtle_vel (TurtleVel): planar linear and angular velocity of the turtle
+
+SERVICES:
+    spawn (Spawn): spawns new turutle in specified position
+    teleport_absolute (TeleportAbsolute): teleports turtle to absolute location
+    set_pen (SetPen): configures turtle pen color and if pen exists
+
+PARAMETERS:
+    waypoints: list of waypoints (x,y) to follow
+    ~kp_linear: proportional control constant for linear velocity
+    ~kp_rotational: proportional control constant for angular velocity
+    ~dist_thresh: distance at which turtle will switch to next waypoint
+    ~angle_thresh: angle difference at which turtle will stop turning
+"""
+
+import rospy
+from turtlesim.msg import Pose
+from turtle_control.msg import TurtleVel
+from turtlesim.srv import Spawn, TeleportAbsolute, SetPen
+from math import pow, atan2, sqrt, pi
+from enum import Enum, auto
+
+
+class State(Enum):
+    """ The state of the turtle control loop.
+        These are different modes that the controller can be in.
+    """
+    MOVING_FORWARD = auto()
+    TURNING = auto()
+
+
+class Waypoint:
+    """ Causes turtle1 to follow a series of waypoints. """
+    def __init__(self):
+        # Flag that checks if waypoints are marked:
+        self.__marked_waypoints = False
+
+        # Subscribers, publishers, and services for turtle1:
+        self.__pose_sub = rospy.Subscriber('/turtle1/pose', Pose,
+                                           self.pose_callback)
+        self.__turtle_vel_pub = rospy.Publisher('/turtle1/turtle_vel',
+                                                TurtleVel, queue_size=10)
+        self.__teleport_abs = rospy.ServiceProxy('/turtle1/teleport_absolute',
+                                                 TeleportAbsolute)
+        self.__set_pen = rospy.ServiceProxy('/turtle1/set_pen', SetPen)
+
+        # Subscribers, publishers, and services for mark:
+        self.__spawn = rospy.ServiceProxy('spawn', Spawn)
+        self.__turtle_vel_pub_mark = rospy.Publisher('/mark/turtle_vel',
+                                                     TurtleVel, queue_size=10)
+        self.__teleport_abs_mark = \
+            rospy.ServiceProxy('/mark/teleport_absolute', TeleportAbsolute)
+        self.__set_pen_mark = rospy.ServiceProxy('/mark/set_pen', SetPen)
+
+        # Parameters:
+        self.__waypoints = rospy.get_param('waypoints')
+        self.__kp_l = rospy.get_param('~kp_linear')
+        self.__kp_r = rospy.get_param('~kp_rotational')
+        self.__dist_thresh = rospy.get_param('~dist_thresh')
+        self.__angle_thresh = rospy.get_param('~angle_thresh')
+
+        # Controller variables:
+        self.__rate = rospy.Rate(10)
+        self.__pose = Pose()
+        self.__counter = 1  # start moving towards second waypoint
+        self.__state = State.MOVING_FORWARD
+
+    def mark_waypoints(self):
+        """ Marks the waypoints using the turtle named mark. """
+        self.__spawn(x=0, y=0, theta=0, name='mark')
+
+        for waypoint in self.__waypoints:
+            for theta in [pi/4, 3*pi/4, -3*pi/4, -pi/4]:
+                self.__set_pen_mark(off=1)
+                self.__teleport_abs_mark(x=waypoint[0], y=waypoint[1],
+                                         theta=theta)
+                self.__set_pen_mark(r=255, g=0, b=0, width=2)
+
+                for i in range(5):  # draw line for 1/2 second
+                    self.__turtle_vel_pub_mark.publish(TurtleVel(linear=1))
+                    self.__rate.sleep()
+
+        self.__set_pen_mark(off=1)
+        self.__turtle_vel_pub_mark.publish(TurtleVel(linear=0))
+        self.__teleport_abs_mark(x=self.__waypoints[1][0],
+                                 y=self.__waypoints[1][1],
+                                 theta=0)
+
+        # Teleporting turtle1 to the first waypoint.
+        self.__set_pen(off=1)
+        self.__teleport_abs(x=self.__waypoints[0][0], y=self.__waypoints[0][1],
+                            theta=0)
+        self.__set_pen(off=0)
+        self.__marked_waypoints = True
+
+    def dist_diff(self, waypoint_pose):
+        """ Euclidean distance from the current position to the waypoint.
+
+            Args:
+                waypoint_pose (Pose): pose of targeted waypoint
+        """
+        return sqrt(pow((waypoint_pose.x - self.__pose.x), 2)
+                    + pow((waypoint_pose.y - self.__pose.y), 2))
+
+    def angle_diff(self, waypoint_pose):
+        """ Angle difference between current angle and the angle that points
+            towards the targeted waypoint.
+
+            Args:
+                waypoint_pose (Pose): pose of targeted waypoint
+        """
+        waypoint_angle = atan2(waypoint_pose.y - self.__pose.y, waypoint_pose.x
+                               - self.__pose.x)
+        diff = waypoint_angle - self.__pose.theta
+
+        # Accounting for the limit overflow between pi and -pi.
+        if diff > pi:
+            return diff - 2*pi
+        elif diff < -pi:
+            return diff + 2*pi
+        else:
+            return diff
+
+    def move_forward(self):
+        """ Gives turtle a forward linear velocity.
+            Uses feedback control to keep turtle on right trajectory.
+        """
+        target_waypoint = self.__waypoints[self.__counter]
+        waypoint_pose = Pose(x=target_waypoint[0], y=target_waypoint[1])
+
+        if self.dist_diff(waypoint_pose) >= self.__dist_thresh:
+            u_l = self.__kp_l * self.dist_diff(waypoint_pose)
+            u_r = self.__kp_r * self.angle_diff(waypoint_pose)
+            u = TurtleVel(linear=u_l, angular=u_r)
+            self.__turtle_vel_pub.publish(u)
+        else:
+            self.__counter += 1
+            if self.__counter == len(self.__waypoints):
+                self.__counter = 0
+            self.__teleport_abs_mark(x=self.__waypoints[self.__counter][0],
+                                     y=self.__waypoints[self.__counter][1],
+                                     theta=0)
+            self.__state = State.TURNING
+
+    def turn(self):
+        """ Makes turtle rotate until alligned with next waypoint. """
+        target_waypoint = self.__waypoints[self.__counter]
+        waypoint_pose = Pose(x=target_waypoint[0], y=target_waypoint[1])
+
+        if self.angle_diff(waypoint_pose) >= self.__angle_thresh:
+            u = TurtleVel(linear=0, angular=1)  # turning velocity of 1
+            self.__turtle_vel_pub.publish(u)
+        else:
+            self.__state = State.MOVING_FORWARD
+
+    def pose_callback(self, data):
+        """ Used as the 'pose' callback.
+
+            Args:
+               data (Pose): the received pose message data
+        """
+        if self.__marked_waypoints:
+            self.__pose = data
+            if self.__state == State.MOVING_FORWARD:
+                self.move_forward()
+            else:
+                self.turn()
+
+
+def main():
+    """ The main() function. """
+    rospy.init_node('waypoint')
+    my_waypoint = Waypoint()
+    my_waypoint.mark_waypoints()
+    rospy.spin()
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass

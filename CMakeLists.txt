@@ -8,12 +8,12 @@ project(turtle_control)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  geometry_msgs
   message_generation
   roscpp
   rospy
   std_msgs
   turtlesim
-  geometry_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -71,8 +71,8 @@ add_service_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  turtlesim
   geometry_msgs
+  turtlesim
 )
 
 ################################################
@@ -107,7 +107,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES turtle_control
-  CATKIN_DEPENDS message_runtime roscpp rospy std_msgs turtlesim geometry_msgs
+  CATKIN_DEPENDS geometry_msgs message_runtime roscpp rospy std_msgs turtlesim
 #  DEPENDS system_lib
 )
 
@@ -164,6 +164,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   nodes/turtle_interpret
   nodes/mover
+  nodes/waypoint
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -189,11 +190,10 @@ catkin_install_python(PROGRAMS
 # )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
+install(DIRECTORY launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+  FILES_MATCHING PATTERN "*.launch"
+)
 
 #############
 ## Testing ##

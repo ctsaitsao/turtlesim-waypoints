@@ -1,17 +1,17 @@
 #!/usr/bin/env python
-""" 
-Publishes twist that will move a robot back and forth in the x direction 
-while randomly providing a angular velocity about the z-axis.
+"""
+Translates a custom velocity message into a geometry_msgs/Twist that can be
+used by the turtlesim.
 
 SUBSCRIBERS:
-  turtle_vel (TurtleVel) ~ linear and angular velocity of the turtle
+    turtle_vel (TurtleVel): planar linear and angular velocity of the turtle
 
 PUBLISHERS:
-  cmd_vel (Twist) ~ the velocity of an erratic turtle path
+    cmd_vel (Twist): all 3D velocity components of the turtle
 
 SERVICES:
-  vel_translate (VelTranslate) ~ converts a geometry_msgs/Twist into a TurtleVel message 
-
+    vel_translate (VelTranslate): converts a geometry_msgs/Twist into a
+        TurtleVel message
 """
 
 import rospy
@@ -19,66 +19,73 @@ from turtle_control.msg import TurtleVel
 from geometry_msgs.msg import Twist, Vector3
 from turtle_control.srv import VelTranslate, VelTranslateResponse
 
+
 def turtle_twist(linear, angular):
     """ Create a twist suitable for a turtle
 
         Args:
-           linear (float) : forward velocity of the turtle
-           angular (float) : angular velocity of the turtle
+            linear (float): planar forward velocity of the turtle
+            angular (float): planar angular velocity of the turtle
 
         Returns:
-           Twist : a 2D twist object corresponding to linear/angular velocity
+            Twist : a 3D twist object corresponding to planar linear/angular
+                velocity
     """
-    return Twist(linear = Vector3(x = linear, y = 0, z = 0),
-                  angular = Vector3(x = 0, y = 0, z = angular))
+    return Twist(linear=Vector3(x=linear, y=0, z=0),
+                 angular=Vector3(x=0, y=0, z=angular))
+
 
 class TurtleInterpret:
-    """ Publishes geometry_msgs/Twist commands at a fixed rate 
-    """
+    """ Interprets Twist velocities as TurtleVel velocities. """
     def __init__(self):
-        self.turtle_vel_sub = rospy.Subscriber("turtle_vel", TurtleVel, self.turtle_vel_callback)
-        self.cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size = 10)
-        self.vel_translate = rospy.Service("vel_translate", VelTranslate, self.vel_translate_callback)
+        self.__turtle_vel_sub = rospy.Subscriber('turtle_vel', TurtleVel,
+                                                 self.turtle_vel_callback)
+        self.__cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+        self.__vel_translate = rospy.Service('vel_translate', VelTranslate,
+                                             self.vel_translate_callback)
 
     def turtle_vel_callback(self, data):
-        """ Used as the 'turtle_vel' callback.  
-           
+        """ Used as the 'turtle_vel' callback.
+
             Args:
-               data (turtle_vel) - the received turtle_vel
+                data (TurtleVel): the received turtle_vel message data
         """
-        rospy.logdebug("Linear velocity of turtle = %f, angular velocity of turtle = %f", data.linear, data.angular)
-        self.cmd_vel_pub.publish(turtle_twist(data.linear, data.angular))
+        rospy.logdebug("Linear velocity of turtle = %f, angular velocity of \
+            turtle = %f", data.linear, data.angular)
+        self.__cmd_vel_pub.publish(turtle_twist(data.linear, data.angular))
 
     def vel_translate_callback(self, req):
         """ Callback function for the vel_translate service
-        
-            Converts a geometry_msgs/Twist into a TurtleVel message 
+
+            Converts a geometry_msgs/Twist into a TurtleVel message
 
             Args:
-               req (VelTranslateRequest) : contains linear and angular velocity of the turtle in Twist form
+                req (VelTranslateRequest): contains a Twist message
 
             Returns:
-               res (VelTranslateResponse) : contains linear and angular velocity of the turtle in TurtleVel form
+                res (VelTranslateResponse): contains a TurtleVel message
         """
-        vx = req.linear.x
-        vy = req.linear.y
-        vz = req.linear.z
-        wx = req.angular.x
-        wy = req.angular.y
-        wz = req.angular.z
+        vx = req.twist.linear.x
+        vy = req.twist.linear.y
+        vz = req.twist.linear.z
+        wx = req.twist.angular.x
+        wy = req.twist.angular.y
+        wz = req.twist.angular.z
 
         if vy != 0 or vz != 0 or wx != 0 or wy != 0:
-            res = VelTranslateResponse(None)
-        else: 
-            res = VelTranslateResponse(linear = vx, angular = wz)
+            res = VelTranslateResponse(TurtleVel(None))  # throws an error
+        else:
+            res = VelTranslateResponse(TurtleVel(linear=vx, angular=wz))
 
         return res
+
 
 def main():
     """ The main() function. """
     rospy.init_node('turtle_interpret')
     TurtleInterpret()
     rospy.spin()
+
 
 if __name__ == '__main__':
     try:

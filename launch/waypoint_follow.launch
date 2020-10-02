@@ -1,0 +1,12 @@
+<launch>
+    <rosparam command="load" file="$(find turtle_control)/config/waypoint.yaml"/>
+    <node name="turtle_interpret" pkg="turtle_control" type="turtle_interpret" ns="turtle1"/>
+    <node name="turtle_interpret" pkg="turtle_control" type="turtle_interpret" ns="mark"/>
+    <node name="turtlesim_node" pkg="turtlesim" type="turtlesim_node"/>
+    <node name="waypoint" pkg="turtle_control" type="waypoint">
+        <param name="~kp_linear" value="1.5"/>  
+        <param name="~kp_rotational" value="6"/>  
+        <param name="~dist_thresh" value="0.01"/>  
+        <param name="~angle_thresh" value="0.05"/>  
+    </node>
+</launch>
