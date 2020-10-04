@@ -110,7 +110,7 @@ Unless otherwise specified, list the command and all arguments that you passed t
    std_srvs
    turtlesim
    ```
-
+   [these are all the n-th order dependencies. you are looking for `rospcak depends1 crazy_turtle`]
 12. Use the ROS command `rossrv package crazy_turtle` to list the types of services defined by `crazy_turtle`
     The output of the command looks like
     ```
