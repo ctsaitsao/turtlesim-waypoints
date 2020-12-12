@@ -1,8 +1,8 @@
-# ME495 (Embedded Systems for Robotics) Homework 01:
+# ME495 (Embedded Systems for Robotics) Homework 1
 
 Author: Christopher Tsai
 
-## Overview:
+## Overview
 
 This package contains nodes that cause a simulated turtle (from the package turtlesim) to move through a series of waypoints. The turtle uses feedback control to correct its position throughout the trajectory between waypoints. After reaching a waypoint, the turtle turns until it faces directly at the next waypoint. 
 
@@ -10,11 +10,11 @@ A second turtle is used to mark the locations of the waypoints prior to the main
 
 The package contains a custom velocity message containing only the planar forward and planar rotational velocities of the turtle, which are the two components of a 6D twist that a differential drive robot can control.
 
-## Demo:
+## Demo
 
 https://youtu.be/OozKJdEjlns 
 
-## Usage Instructions:
+## Usage Instructions
 
 1. Create a new workspace and clone the demonstration code.
 ```Shell
@@ -40,7 +40,7 @@ catkin_make install
 roslaunch turtle_control waypoint_follow.launch
 ```
 
-## Configuration Options:
+## Configuration Options
 
 To change the locations of the waypoints, edit the `config/waypoint.yaml` file.
 
