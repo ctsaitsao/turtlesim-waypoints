@@ -45,7 +45,7 @@ roslaunch turtlesim-waypoints waypoint_follow.launch
 To change the locations of the waypoints, edit the `config/waypoint.yaml` file.
 
 The `waypoint` node has configurable private parameters, which can be edited in the `launch/waypoint_follow.launch` file. See node docstring for parameter descriptions.
-```Shell
+```
 <node name="waypoint" pkg="turtlesim-waypoints" type="waypoint">
     <param name="~kp_linear" value="1.5"/>  
     <param name="~kp_rotational" value="6"/>  
