@@ -1,6 +1,6 @@
-# ME495 (Embedded Systems for Robotics) Homework 1
+# Turtlesim Waypoints ROS Package
 
-Author: Christopher Tsai
+First assignment for ME 495: Embedded Systems in Robotics, Northwestern University, Fall 2020.
 
 ## Overview
 
@@ -23,7 +23,7 @@ mkdir -p ws/src
 
 # clone the demonstration code
 cd ws/src
-git clone https://github.com/ME495-EmbeddedSystems/homework01-ctsaitsao turtle_control
+git clone https://github.com/ctsaitsao/turtlesim-waypoints.git turtlesim-waypoints
 
 # return to ws root
 cd ../
@@ -37,7 +37,7 @@ catkin_make install
 
 3. Launch the nodes.
 ```Shell
-roslaunch turtle_control waypoint_follow.launch
+roslaunch turtlesim-waypoints waypoint_follow.launch
 ```
 
 ## Configuration Options
@@ -46,7 +46,7 @@ To change the locations of the waypoints, edit the `config/waypoint.yaml` file.
 
 The `waypoint` node has configurable private parameters, which can be edited in the `launch/waypoint_follow.launch` file. See node docstring for parameter descriptions.
 ```Shell
-<node name="waypoint" pkg="turtle_control" type="waypoint">
+<node name="waypoint" pkg="turtlesim-waypoints" type="waypoint">
     <param name="~kp_linear" value="1.5"/>  
     <param name="~kp_rotational" value="6"/>  
     <param name="~dist_thresh" value="0.01"/>  
